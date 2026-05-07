@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLDB Quick Start Guide</title>
+<style>
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+  background: #fff;
+}
+
+/* ─── Page tabs ─── */
+.tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: #f5f5f5;
+  border-bottom: 1px solid #d0d0d0;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+}
+.tab-bar a {
+  display: block;
+  padding: 10px 18px;
+  font-size: 13px;
+  color: #555;
+  text-decoration: none;
+  white-space: nowrap;
+  border-right: 1px solid #d0d0d0;
+  transition: background .15s;
+}
+.tab-bar a:hover { background: #e8e8e8; color: #000; }
+
+/* ─── Layout ─── */
+.layout {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ─── Sidebar ─── */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 28px 16px 28px 20px;
+  border-right: 1px solid #e0e0e0;
+  position: sticky;
+  top: 41px;
+  height: calc(100vh - 41px);
+  overflow-y: auto;
+}
+.sidebar-title {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #888;
+  margin-bottom: 12px;
+}
+.toc { list-style: none; }
+.toc li { margin: 0; }
+.toc a {
+  display: block;
+  padding: 3px 8px;
+  font-size: 13px;
+  color: #4a4a4a;
+  text-decoration: none;
+  border-radius: 3px;
+}
+.toc a:hover { background: #f0f0f0; }
+.toc .ch { font-weight: 600; color: #000; margin-top: 10px; }
+.toc .sec { padding-left: 18px; color: #555; }
+
+/* ─── Main ─── */
+main {
+  flex: 1;
+  min-width: 0;
+  padding: 36px 50px 80px 50px;
+  max-width: 900px;
+}
+
+/* ─── Page sections ─── */
+.page {
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 60px;
+  padding-bottom: 60px;
+}
+.page:last-child { border-bottom: none; }
+
+/* ─── Nav prev/next ─── */
+.page-nav {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+.page-nav a { color: #0070c9; text-decoration: none; }
+.page-nav a:hover { text-decoration: underline; }
+
+/* ─── Typography ─── */
+h1 { font-size: 30px; font-weight: bold; margin: 0 0 18px; color: #000; }
+h2 { font-size: 21px; font-weight: bold; margin: 36px 0 10px; color: #000; border-bottom: 1px solid #e8e8e8; padding-bottom: 4px; }
+h3 { font-size: 16px; font-weight: bold; margin: 24px 0 8px; color: #000; }
+p  { margin: 0 0 14px; }
+ul, ol { margin: 8px 0 14px 26px; }
+li { margin-bottom: 4px; }
+em { font-style: italic; }
+strong { font-weight: bold; }
+a  { color: #0070c9; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ─── Inline code ─── */
+code {
+  font-family: Menlo, Monaco, "Courier New", monospace;
+  font-size: 13px;
+  background: #f4f4f4;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* ─── Code blocks (Apple-style single-cell table) ─── */
+.code-block {
+  background: #f9f9f9;
+  border: 1px solid #d8d8d8;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 10px 0 16px;
+  overflow-x: auto;
+  font-family: Menlo, Monaco, "Courier New", monospace;
+  font-size: 13px;
+  white-space: pre;
+  line-height: 1.5;
+}
+
+/* ─── Note / Important boxes ─── */
+.note-box {
+  border-left: 4px solid #aaa;
+  background: #f8f8f8;
+  padding: 10px 14px;
+  margin: 14px 0;
+  font-size: 14px;
+}
+.note-box .label { font-weight: bold; }
+.important-box {
+  border-left: 4px solid #e8a000;
+  background: #fffbf0;
+  padding: 10px 14px;
+  margin: 14px 0;
+  font-size: 14px;
+}
+.important-box .label { font-weight: bold; }
+
+/* ─── Command table (two-column GDB/LLDB) ─── */
+.cmd-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 13.5px;
+}
+.cmd-table th {
+  background: #f0f0f0;
+  padding: 7px 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: bold;
+  border: 1px solid #d0d0d0;
+  width: 50%;
+}
+.cmd-table td {
+  padding: 7px 12px;
+  vertical-align: top;
+  border: 1px solid #d0d0d0;
+}
+.cmd-table .row-desc td {
+  background: #f8f8f8;
+  font-style: italic;
+  font-size: 13px;
+  color: #444;
+  padding: 5px 12px;
+}
+.cmd-table code {
+  display: block;
+  margin: 2px 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  white-space: pre;
+}
+
+/* ─── Screenshot placeholder ─── */
+.screenshot {
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  padding: 16px;
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  margin: 16px 0;
+  border-radius: 4px;
+}
+
+/* ─── Footer ─── */
+footer {
+  border-top: 1px solid #ddd;
+  padding: 20px 50px;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+}
+footer a { color: #0070c9; }
+
+hr { border: none; border-top: 1px solid #e0e0e0; margin: 28px 0; }
+</style>
+</head>
+<body>
+
+<!-- Page tab bar -->
+<div class="tab-bar">
+  <a href="#page-intro">About LLDB and Xcode</a>
+  <a href="#page-basics">Getting Started with LLDB</a>
+  <a href="#page-examples">GDB and LLDB Command Examples</a>
+  <a href="#page-standalone">Using LLDB as a Standalone Debugger</a>
+</div>
+
+<div class="layout">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar-title">LLDB Quick Start Guide</div>
+  <ul class="toc">
+    <li><a class="ch" href="#page-intro">About LLDB and Xcode</a></li>
+    <li><a class="sec" href="#intro-atglance">At a Glance</a></li>
+    <li><a class="sec" href="#intro-seealso">See Also</a></li>
+
+    <li><a class="ch" href="#page-basics">Getting Started with LLDB</a></li>
+    <li><a class="sec" href="#basics-structure">LLDB Command Structure</a></li>
+    <li><a class="sec" href="#basics-syntax">Understanding Command Syntax</a></li>
+    <li><a class="sec" href="#basics-options">Using Command Options</a></li>
+    <li><a class="sec" href="#basics-raw">Using Raw Commands</a></li>
+    <li><a class="sec" href="#basics-completion">Using Command Completion</a></li>
+    <li><a class="sec" href="#basics-gdb">Comparing LLDB with GDB</a></li>
+    <li><a class="sec" href="#basics-python">Scripting with Python</a></li>
+    <li><a class="sec" href="#basics-aliases">Command Aliases and Help</a></li>
+    <li><a class="sec" href="#basics-alias-understanding">Understanding Command Aliases</a></li>
+    <li><a class="sec" href="#basics-help">Using LLDB Help</a></li>
+
+    <li><a class="ch" href="#page-examples">GDB and LLDB Command Examples</a></li>
+    <li><a class="sec" href="#ex-execution">Execution Commands</a></li>
+    <li><a class="sec" href="#ex-breakpoint">Breakpoint Commands</a></li>
+    <li><a class="sec" href="#ex-watchpoint">Watchpoint Commands</a></li>
+    <li><a class="sec" href="#ex-variables">Examining Variables</a></li>
+    <li><a class="sec" href="#ex-expressions">Evaluating Expressions</a></li>
+    <li><a class="sec" href="#ex-threads">Examining Thread State</a></li>
+    <li><a class="sec" href="#ex-libraries">Executable and Shared Library Query Commands</a></li>
+    <li><a class="sec" href="#ex-misc">Miscellaneous</a></li>
+
+    <li><a class="ch" href="#page-standalone">Using LLDB as a Standalone Debugger</a></li>
+    <li><a class="sec" href="#sa-specify">Specifying the Program to Debug</a></li>
+    <li><a class="sec" href="#sa-breakpoints">Setting Breakpoints</a></li>
+    <li><a class="sec" href="#sa-watchpoints">Setting Watchpoints</a></li>
+    <li><a class="sec" href="#sa-launch">Launching the Program with LLDB</a></li>
+    <li><a class="sec" href="#sa-control">Controlling Your Program</a></li>
+    <li><a class="sec" href="#sa-threads">Examining Thread State</a></li>
+    <li><a class="sec" href="#sa-frames">Examining the Stack Frame State</a></li>
+    <li><a class="sec" href="#sa-altcode">Executing Alternative Code</a></li>
+  </ul>
+</aside>
+
+<!-- ══ MAIN CONTENT ══ -->
+<main>
+
+<!-- ══════════════════════════════════════
+     PAGE 1: About LLDB and Xcode
+     Source: Introduction.html
+══════════════════════════════════════ -->
+<section class="page" id="page-intro">
+
+<div class="page-nav">
+  <a href="#page-basics">Next ›</a>
+</div>
+
+<h1 id="intro">About LLDB and Xcode</h1>
+
+<p>With the release of Xcode 5, the LLDB debugger becomes the foundation for the debugging experience on OS X.</p>
+
+<div class="screenshot">
+  [Image: lldb_in_xc5_command_window_2x.png — LLDB console in Xcode 5]<br>
+  <small>Source: <code>https://developer.apple.com/library/archive/documentation/IDEs/Conceptual/gdb_to_lldb_transition_guide/art/lldb_in_xc5_command_window_2x.png</code></small>
+</div>
+
+<p>LLDB is Apple's "from the ground up" replacement for GDB, developed in close coordination with the LLVM compilers to bring you state-of-the-art debugging with extensive capabilities in flow control and data inspection. Starting with Xcode 5, all new and preexisting development projects are automatically reconfigured to use LLDB.</p>
+
+<p>The standard LLDB installation provides you with an extensive set of commands designed to be compatible with familiar GDB commands. In addition to using the standard configuration, you can easily customize LLDB to suit your needs.</p>
+
+<h2 id="intro-atglance">At a Glance</h2>
+
+<p>LLDB is fully integrated with Xcode 5 for source development and the build-and-run debugging experience. You access its wealth of capabilities using the controls provided by the Xcode UI and with commands issued from the Xcode debugging console.</p>
+
+<h3>Understand LLDB Basics to Unlock Advanced Features</h3>
+
+<p>With the LLDB command language, you can use LLDB's advanced features. The command syntax is regular and easy to learn. Many commands are expressed by included shortcuts, saving you time and keystrokes. And you can use the LLDB help system to quickly inspect and learn the details of the existing commands, shortcuts, and command options.</p>
+
+<p>You customize LLDB using the command alias capability. You can also extend LLDB through the use of Python scripts and the Python-LLDB Object Library.</p>
+
+<p><strong>Relevant chapter:</strong> <a href="#page-basics">Getting Started with LLDB</a></p>
+
+<h3>Use LLDB Equivalents for Common GDB Commands</h3>
+
+<p>LLDB, as delivered, includes many command aliases designed to be the same as GDB commands. If you are already experienced in using GDB commands, you can use the provided tables to look up GDB commands and find the LLDB equivalents, including canonical and shorthand forms.</p>
+
+<p><strong>Relevant chapter:</strong> <a href="#page-examples">GDB and LLDB Command Examples</a></p>
+
+<h3>Standalone LLDB Workflow</h3>
+
+<p>You usually experience LLDB by using the Xcode debugging features and, and you issue LLDB commands using the Xcode console pane. However, for development of open source and other non-GUI-based application debugging, you can use LLDB from a Terminal window as a traditional command-line debugger.</p>
+
+<p>Knowing how LLDB works as a command-line debugger can help you understand and use the full power of LLDB in the Xcode console pane as well.</p>
+
+<p><strong>Relevant Chapter:</strong> <a href="#page-standalone">Using LLDB as a Standalone Debugger</a></p>
+
+<h2 id="intro-seealso">See Also</h2>
+
+<p>For a good look at how to use Xcode's debugging features, all powered by the LLDB debugging engine, see the WWDC 2013 session video for Tools #407 <em>WWDC 2013: Debugging with Xcode</em>.</p>
+
+<p>To see the latest advanced techniques to help you efficiently track down bugs with LLDB, view the WWDC 2013 session video for Tools #413 <em>WWDC 2013: Advanced Debugging with LLDB</em>.</p>
+
+<p>For more information about the use of LLDB Python scripting and other advanced capabilities, visit <a href="http://lldb.llvm.org/">The LLDB Debugger</a>.</p>
+
+<div class="page-nav" style="margin-top:36px;">
+  <a href="#page-basics">Next ›</a>
+</div>
+
+<hr>
+<p style="font-size:12px;color:#888;">Copyright &#169; 2013 Apple Inc. All Rights Reserved. <a href="http://www.apple.com/legal/internet-services/terms/site.html">Terms of Use</a> | <a href="http://www.apple.com/privacy/">Privacy Policy</a> | Updated: 2013-09-18</p>
+
+</section>
+
+
+<!-- ══════════════════════════════════════
+     PAGE 2: Getting Started with LLDB
+     Source: lldb-basics.html
+══════════════════════════════════════ -->
+<section class="page" id="page-basics">
+
+<div class="page-nav">
+  <a href="#page-examples">Next ›</a>
+  <a href="#page-intro">‹ Previous</a>
+</div>
+
+<h1 id="basics">Getting Started with LLDB</h1>
+
+<p>LLDB is a command-line debugging environment with functionality similar to GDB. LLDB provides the underlying debugging environment for Xcode, which includes a console pane in the debugging area for direct access to LLDB commands within the Xcode IDE environment.</p>
+
+<p>This chapter briefly explains the LLDB syntax and command features, informs you on the use of the command aliasing capabilities, and introduces you to the LLDB help system.</p>
+
+<h2 id="basics-structure">LLDB Command Structure</h2>
+
+<p>All users starting out with LLDB should be aware of the LLDB command structure and syntax in order to tap the potential of LLDB and understand how to get the most from it. In many cases, commands provided by LLDB&#8212;for instance, <code>list</code> and <code>b</code>&#8212;work just like GDB commands and make learning LLDB easier for experienced GDB users.</p>
+
+<h3 id="basics-syntax">Understanding Command Syntax</h3>
+
+<p>The LLDB command syntax is structured and regular throughout. LLDB commands are all of the form:</p>
+
+<div class="code-block">&lt;command&gt; [&lt;subcommand&gt; [&lt;subcommand&gt;...]] &lt;action&gt; [-options [option-value]] [argument [argument...]]</div>
+
+<p><em>Command</em> and <em>subcommand</em> are names of LLDB debugger objects. Commands and subcommands are arranged in a hierarchy: a particular command object creates the context for a subcommand object which follows it, which again provides context for the next subcommand, and so on. The <em>action</em> is the operation you want to perform in the context of the combined debugger objects (the string of <em>command subcommand..</em> entities preceding it). Options are <em>action modifiers</em>, which often take a value. Arguments represent a variety of different things according to the context of the command being used&#8212;for example, using the <code>process launch</code> command to start a process, the arguments in that context are what you enter on the command line as if you were invoking the process outside of a debugging session.</p>
+
+<p>The LLDB command-line parsing is completed before command execution. Commands, subcommands, options, option values, and arguments are all white space separated, and double quotes are used to protect white spaces in option values and arguments. If you need to put a backslash or double quote character into an argument, you precede that character with a backslash in the argument. LLDB uses both single and double quotes equivalently, allowing doubly quoted portions of a command line to be written easily. For example:</p>
+
+<div class="code-block">(lldb) command [subcommand] -option "some \"quoted\" string"</div>
+
+<p>can also be written:</p>
+
+<div class="code-block">(lldb) command [subcommand] -option 'some "quoted" string'</div>
+
+<p>This command parsing design helps make LLDB command syntax regular and uniform across all commands. (For the GDB users, it also means you may have to quote some arguments in LLDB that you wouldn't have to quote in GDB.)</p>
+
+<p>As example of a simple LLDB command, to set a breakpoint in file <code>test.c</code> at line 12 you enter:</p>
+
+<div class="code-block">(lldb) breakpoint set --file test.c --line 12</div>
+
+<p>Commands which appear to diverge from this model&#8212;for example, <code>print</code> or <code>b</code>&#8212;are typically customized command forms created by the <code>command alias</code> mechanism, which is discussed in <a href="#basics-aliases">Command Aliases and Help</a>.</p>
+
+<h3 id="basics-options">Using Command Options</h3>
+
+<p>Command options in LLDB have a canonical (also referred to as "discoverable") form and an abbreviated form. For example, here is a partial listing of the command options for the <code>breakpoint set</code> command, listing the canonical form in parentheses:</p>
+
+<div class="code-block">breakpoint set
+       -M &lt;method&gt; ( --method &lt;method&gt; )
+       -S &lt;selector&gt; ( --selector &lt;selector&gt; )
+       -b &lt;function-name&gt; ( --basename &lt;function-name&gt; )
+       -f &lt;filename&gt; ( --file &lt;filename&gt; )
+       -l &lt;linenum&gt; ( --line &lt;linenum&gt; )
+       -n &lt;function-name&gt; ( --name &lt;function-name&gt; )
+       &#8230;</div>
+
+<p>Options can be placed in any order on the command line following the command. If arguments begin with a hyphen (<code>-</code>), you indicate to LLDB that you're done with options for the current command by adding the option termination signal, a double hyphen (<code>--</code>). For instance, if you want to launch a process and give the <code>process launch</code> command the <code>--stop-at-entry</code> option, and want that same process to be launched with the arguments <code>-program_arg_1 value</code> and <code>-program_arg_2 value</code>, you enter:</p>
+
+<div class="code-block">(lldb) process launch --stop-at-entry -- -program_arg_1 value -program_arg_2 value</div>
+
+<h3 id="basics-raw">Using Raw Commands</h3>
+
+<p>The LLDB command parser supports "raw" commands, in which, after command options are removed, the rest of the command string is passed uninterpreted to the command. This is convenient for commands whose arguments might be some complex expression that would be clumsy to protect with backslashes. For instance, the <code>expression</code> command is a raw command.</p>
+
+<p>When you look up a command with <code>help</code>, the output for a command tells you whether the command is raw or not so that you know what to expect.</p>
+
+<p>Raw commands can still have options, if your command string has dashes in it, you indicate that these are not option markers by putting an option termination (<code>--</code>) after the command name but before the command string.</p>
+
+<h3 id="basics-completion">Using Command Completion in LLDB</h3>
+
+<p>LLDB supports command completion for source file names, symbol names, file names, and so forth. Completion in the Terminal window is initiated by inputting a tab character on the command line. Completions in the Xcode console work in the same way as the completions in the source code editor: The completions pop up automatically after the third character is typed, and the completions pop-up can be manually summoned via the Esc (Escape) key. In addition, completions in the Xcode console follow the Xcode Text Editing preferences specified in the Editing panel.</p>
+
+<p>Individual options in a command can have different completers. For example, the <code>--file &lt;path&gt;</code> option in <code>breakpoint</code> completes to source files, the <code>--shlib &lt;path&gt;</code> option completes to currently loaded shared libraries, and so forth. The behavior can be quite specific&#8212;for example: if you specify <code>--shlib &lt;path&gt;</code>, and are completing on <code>--file &lt;path&gt;</code>, LLDB lists only source files in the shared library specified by <code>--shlib &lt;path&gt;</code>.</p>
+
+<h3 id="basics-gdb">Comparing LLDB with GDB</h3>
+
+<p>The command-line parsing and uniformity of the LLDB command parser differ when using LLDB compared with GDB. The LLDB command syntax sometimes forces you to be more explicit about stating your intentions, but it is more regular in use.</p>
+
+<p>For example, setting a breakpoint is a common operation. In GDB, to set a breakpoint you might enter the following to break at line 12 of <code>foo.c</code>:</p>
+
+<div class="code-block">(gdb) break foo.c:12</div>
+
+<p>And you might enter the following to break at the function <code>foo</code>:</p>
+
+<div class="code-block">(gdb) break foo</div>
+
+<p>More complex <code>break</code> expressions are possible in GDB. One example is <code>(gdb) break foo.c::foo</code> , which means "set the breakpoint in the function <code>foo</code> in the file <code>foo.c</code>." But at some point the GDB syntax becomes convoluted and limits GDB functionality, especially in C++, where there may be no reliable way to specify the function you want to break on. These deficiencies happen because GDB command-line syntax is supported by a complex of special expression parsers that can be at odds with each other.</p>
+
+<p>The LLDB breakpoint command, by comparison, requires only a simple, straightforward approach in its expression and provides the advantages of intelligent auto completion and the ability to set breakpoints in more complex situations. To set the same file and line breakpoint in LLDB, enter:</p>
+
+<div class="code-block">(lldb) breakpoint set --file foo.c --line 12</div>
+
+<p>To set a breakpoint on a function named <code>foo</code> in LLDB, enter:</p>
+
+<div class="code-block">(lldb) breakpoint set --name foo</div>
+
+<p>Setting breakpoints by name is even more powerful in LLDB than in GDB because you can specify that you want to set a breakpoint at a function by method name. To set a breakpoint on all C++ methods named <code>foo</code>, enter:</p>
+
+<div class="code-block">(lldb) breakpoint set --method foo</div>
+
+<p>To set a breakpoint on Objective-C selectors named <code>alignLeftEdges:</code>, enter:</p>
+
+<div class="code-block">(lldb) breakpoint set --selector alignLeftEdges:</div>
+
+<p>You can limit any breakpoints to a specific executable image by using the <code>--shlib &lt;path&gt;</code> expression.</p>
+
+<div class="code-block">(lldb) breakpoint set --shlib foo.dylib --name foo</div>
+
+<p>The LLDB commands presented in this section, using the discoverable command name and canonical form of the option, may seem somewhat lengthy. However, just as in GDB, the LLDB command interpreter does a shortest-unique-string match on command names, creating an abbreviated command form. For example, the following two command-line expressions demonstrate the same command:</p>
+
+<div class="code-block">(lldb) breakpoint set --name "-[SKTGraphicView alignLeftEdges:]"
+(lldb) br s --name "-[SKTGraphicView alignLeftEdges:]"</div>
+
+<p>Similarly, you can combine both shortest-unique-string matching with the abbreviated option format to reduce keystrokes. Using the two together can reduce command line expressions further. For example:</p>
+
+<div class="code-block">(lldb) breakpoint set --shlib foo.dylib --name foo</div>
+
+<p>becomes:</p>
+
+<div class="code-block">(lldb) br s -s foo.dylib -n foo</div>
+
+<p>Using these features of LLDB offers much the same 'shorthand' feel and brevity as when using GDB. Look at <a href="#ex-breakpoint">Breakpoint Commands</a> and other sections in <a href="#page-examples">GDB and LLDB Command Examples</a> for more examples of how the shortest-unique-string matching and using abbreviated form options can save keystrokes.</p>
+
+<div class="note-box"><span class="label">Note: </span>You can also use <code>command alias</code>, discussed in <a href="#basics-aliases">Command Aliases and Help</a>, to make commonly used command-line expressions easy to remember, as well as able to be entered with only a few keystrokes.</div>
+
+<h3 id="basics-python">Scripting with Python</h3>
+
+<p>For advanced users, LLDB has a built-in Python interpreter accessible by using the <code>script</code> command. All the features of the debugger are available as classes in the Python interpreter. As a result, the more complex commands that in GDB are introduced with the <code>define</code> command can be achieved by writing Python functions using the LLDB-Python library and then loading the scripts into your running session, accessing them with the <code>script</code> command. For more information about the LLDB-Python library, visit the <a href="http://lldb.llvm.org/python-reference.html">LLDB Python Reference</a> and <a href="http://lldb.llvm.org/scripting.html">LLDB Python Scripting Example</a> sections of <a href="http://lldb.llvm.org">The LLDB Debugger website</a>.</p>
+
+<h2 id="basics-aliases">Command Aliases and Help</h2>
+
+<p>Now that you understand the LLDB syntax and command-line dynamics, turn your attention to two very useful features of LLDB&#8212;command aliases and the help system.</p>
+
+<h3 id="basics-alias-understanding">Understanding Command Aliases</h3>
+
+<p>Use the command alias mechanism in LLDB to construct aliases for commonly used commands. For instance, if you repeatedly type:</p>
+
+<div class="code-block">(lldb) breakpoint set --file foo.c --line 12</div>
+
+<p>you can construct an alias with:</p>
+
+<div class="code-block">(lldb) command alias bfl breakpoint set -f %1 -l %2</div>
+
+<p>which lets you enter this command as:</p>
+
+<div class="code-block">(lldb) bfl foo.c 12</div>
+
+<p>Because command aliases are useful in a wide variety of situations, you should become familiar with their construction. For a complete explanation of command alias construction, limitations, and syntax, use the LLDB help system. Type:</p>
+
+<div class="code-block">(lldb) help command alias</div>
+
+<div class="note-box"><span class="label">Note: </span>In its default configuration, a few aliases for commonly used commands have been added to LLDB (for instance, <code>step</code>, <code>next</code>, and <code>continue</code>), but no attempt has been made to build an exhaustive set of aliases. In the experience of the LLDB development team, it is more convenient to make the basic commands unique down to a letter or two and then learn these sequences rather than to fill the namespace with lots of aliases and then have to type them out.</div>
+
+<p>Users, however, are free to customize the LLDB command set in any way they like. LLDB reads the file <code>~/.lldbinit</code> at startup. This is the file that stores the aliases created with the <code>command alias</code> command when they are defined. The LLDB help system reads this initialization file and presents the aliases so you can easily remind yourself of what you've set up. To see all currently defined aliases and their definitions, use the <code>help -a</code> command and find the currently defined aliases at the end of the help output, starting with:</p>
+
+<div class="code-block">...
+The following is a list of your current command abbreviations (see 'help command alias' for more info): ...</div>
+
+<h3 id="basics-help">Using LLDB Help</h3>
+
+<p>Explore the LLDB help system to gain a broader understanding of what LLDB has to offer and to view details of LLDB command constructions. Becoming familiar with the <code>help</code> command gives you access to the extensive command documentation in the help system.</p>
+
+<p>A simple invocation of the <code>help</code> command returns a list of all top-level LLDB commands. For example, here is a partial listing:</p>
+
+<div class="code-block">(lldb) help
+The following is a list of built-in, permanent debugger commands:
+
+_regexp-attach    -- Attach to a process id if in decimal, otherwise treat the
+                     argument as a process name to attach to.
+_regexp-break     -- Set a breakpoint using a regular expression to specify the
+                     location, where &lt;linenum&gt; is in decimal and &lt;address&gt; is
+                     in hex.
+_regexp-bt        -- Show a backtrace.  An optional argument is accepted; if
+                     that argument is a number, it specifies the number of
+                     frames to display.  If that argument is 'all', full
+                     backtraces of all threads are displayed.
+ &#8230; and so forth &#8230;</div>
+
+<p>Invoking <code>help</code> followed by any of the commands lists the help entry for that command and any subcommands, options, and arguments. By invoking <code>help &lt;command&gt; &lt;subcommand&gt; [&lt;subcommand&gt;&#8230;]</code> iteratively over all the commands, you traverse the entire LLDB command hierarchy.</p>
+
+<p>The <code>help</code> command display includes all current command aliases when invoked with the option <code>--show-aliases</code> (<code>-a</code> in short form).</p>
+
+<div class="code-block">(lldb) help -a</div>
+
+<div class="note-box"><span class="label">Note: </span>The listing produced by <code>help -a</code> includes all the supplied command aliases and GDB command emulations as well as any command aliases you define.</div>
+
+<div class="important-box"><span class="label">Important: </span>One alias included by popular demand is a weak emulation of the GDB <code>break</code> command. It doesn't do everything that the GDB <code>break</code> command does (for instance, it doesn't handle an expression like <code>break foo.c::bar</code>). Instead, it handles more common situations and makes the transition to using LLDB easier for experienced GDB users. The GDB <code>break</code> emulation is also aliased to <code>b</code> by default, matching the GDB convention.<br><br>
+To learn and exercise the LLDB command set natively, these supplied defaults put the GDB <code>break</code> emulation in the way of the rest of the LLDB breakpoint commands. In the general case with all command aliases, if you don't like one of the supplied aliases, or if it gets in the way, you can easily get rid of it. Using the GDB <code>break</code> emulator alias <code>b</code> as an example, the following command removes the supplied GDB <code>b</code> emulation alias:</div>
+
+<div class="code-block">(lldb) command unalias b</div>
+
+<p>You can also run:</p>
+
+<div class="code-block">(lldb) command alias b breakpoint</div>
+
+<p>which allows you to run the native LLDB <code>breakpoint</code> command with just <code>b</code>.</p>
+
+<p>A more directed way to explore what's available in LLDB is to use the <code>apropos</code> command: It searches the LLDB help documentation for a word and dumps a summary help string for each matching command. For example:</p>
+
+<div class="code-block">(lldb) apropos file
+The following commands may relate to 'file':
+&#8230;
+log enable                     -- Enable logging for a single log channel.
+memory read                    -- Read from the memory of the process being
+                                   debugged.
+memory write                   -- Write to the memory of the process being
+                                   debugged.
+platform process launch        -- Launch a new process on a remote platform.
+platform select                -- Create a platform if needed and select it as
+                                   the current platform.
+plugin load                    -- Import a dylib that implements an LLDB
+                                   plugin.
+process launch                 -- Launch the executable in the debugger.
+process load                   -- Load a shared library into the current
+                                   process.
+source                         -- A set of commands for accessing source file
+                                   information
+&#8230; and so forth &#8230;</div>
+
+<p>Use the <code>help</code> command with command aliases to understand their construction. For instance, type the following command to see an explanation of the supplied GDB <code>b</code> emulation and its implementation:</p>
+
+<div class="code-block">(lldb) help b
+&#8230;
+'b' is an abbreviation for '_regexp-break'</div>
+
+<p>Another feature of the <code>help</code> command is shown by investigating the command <code>break command add</code> (used in <a href="#sa-breakpoints">Setting Breakpoints</a>). To demonstrate it, you should execute the command and examine the help system results:</p>
+
+<div class="code-block">(lldb) help break command add
+Add a set of commands to a breakpoint, to be executed whenever the breakpoint is hit.
+
+Syntax: breakpoint command add &lt;cmd-options&gt; &lt;breakpt-id&gt;
+etc...</div>
+
+<p>Arguments to a command that are specified in the help output in angle brackets (such as <code>&lt;breakpt-id&gt;</code>), indicate that the argument is a common argument type for which further help is available by querying the command system. In this case, to learn more about <code>&lt;breakpt-id&gt;</code>, enter:</p>
+
+<div class="code-block">(lldb) help &lt;breakpt-id&gt;
+
+&lt;breakpt-id&gt; -- Breakpoint IDs consist major and minor numbers; the major
+etc...</div>
+
+<p>Using <code>help</code> often and exploring the LLDB help documentation is a great way to familiarize yourself with the scope of LLDB capabilities.</p>
+
+<div class="page-nav" style="margin-top:36px;">
+  <a href="#page-examples">Next ›</a>
+  <a href="#page-intro">‹ Previous</a>
+</div>
+
+<hr>
+<p style="font-size:12px;color:#888;">Copyright &#169; 2013 Apple Inc. All Rights Reserved. <a href="http://www.apple.com/legal/internet-services/terms/site.html">Terms of Use</a> | <a href="http://www.apple.com/privacy/">Privacy Policy</a> | Updated: 2013-09-18</p>
+
+</section>
+
+
+<!-- ══════════════════════════════════════
+     PAGE 3: GDB and LLDB Command Examples
+     Source: lldb-command-examples.html
+══════════════════════════════════════ -->
+<section class="page" id="page-examples">
+
+<div class="page-nav">
+  <a href="#page-standalone">Next ›</a>
+  <a href="#page-basics">‹ Previous</a>
+</div>
+
+<h1 id="examples">GDB and LLDB Command Examples</h1>
+
+<p>The tables in this chapter list commonly used GDB commands and present equivalent LLDB commands and alternative forms. Also listed are the built-in GDB compatibility aliases in LLDB.</p>
+
+<p>Notice that full LLDB command names can be matched by unique short forms, which can be used instead. For example, instead of <code>breakpoint set</code>, <code>br se</code> can be used.</p>
+
+<h2 id="ex-execution">Execution Commands</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">Launch a process with no arguments.</td></tr>
+<tr><td><code>(gdb) run</code><code>(gdb) r</code></td><td><code>(lldb) process launch</code><code>(lldb) run</code><code>(lldb) r</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Launch a process with arguments <code>&lt;args&gt;</code>.</td></tr>
+<tr><td><code>(gdb) run &lt;args&gt;</code><code>(gdb) r &lt;args&gt;</code></td><td><code>(lldb) process launch -- &lt;args&gt;</code><code>(lldb) r &lt;args&gt;</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Launch process <code>a.out</code> with arguments 1 2 3 without having to supply the args every time.</td></tr>
+<tr><td><code>% gdb --args a.out 1 2 3</code><code>(gdb) run</code><code>...</code><code>(gdb) run</code><code>...</code></td><td><code>(% lldb -- a.out 1 2 3</code><code>(lldb) run</code><code>...</code><code>(lldb) run</code><code>...</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Launch a process with arguments in a new terminal window (OS X only).</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) process launch --tty -- &lt;args&gt;</code><code>(lldb) pro la -t -- &lt;args&gt;</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Launch a process with arguments in an existing Terminal window, <code>/dev/ttys006</code> (OS X only).</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) process launch --tty=/dev/ttys006 -- &lt;args&gt;</code><code>(lldb) pro la -t/dev/ttys006 -- &lt;args&gt;</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set environment variables for process before launching.</td></tr>
+<tr><td><code>(gdb) set env DEBUG 1</code></td><td><code>(lldb) settings set target.env-vars DEBUG=1</code><code>(lldb) set se target.env-vars DEBUG=1</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set environment variables for process and launch process in one command.</td></tr>
+<tr><td></td><td><code>(lldb) process launch -v DEBUG=1</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Attach to the process with process ID 123.</td></tr>
+<tr><td><code>(gdb) attach 123</code></td><td><code>(lldb) process attach --pid 123</code><code>(lldb) attach -p 123</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Attach to a process named <code>a.out</code>.</td></tr>
+<tr><td><code>(gdb) attach a.out</code></td><td><code>(lldb) process attach --name a.out</code><code>(lldb) pro at -n a.out</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Wait for a process named <code>a.out</code> to launch and attach.</td></tr>
+<tr><td><code>(gdb) attach -waitfor a.out</code></td><td><code>(lldb) process attach --name a.out --waitfor</code><code>(lldb) pro at -n a.out -w</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Attach to a remote GDB protocol server running on the system <code>eorgadd</code>, port 8000.</td></tr>
+<tr><td><code>(gdb) target remote eorgadd:8000</code></td><td><code>(lldb) gdb-remote eorgadd:8000</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Attach to a remote GDB protocol server running on the local system, port 8000.</td></tr>
+<tr><td><code>(gdb) target remote localhost:8000</code></td><td><code>(lldb) gdb-remote 8000</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Attach to a Darwin kernel in kdp mode on the system <code>eorgadd</code>.</td></tr>
+<tr><td><code>(gdb) kdp-reattach eorgadd</code></td><td><code>(lldb) kdp-remote eorgadd</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Do a source-level single step in the currently selected thread.</td></tr>
+<tr><td><code>(gdb) step</code><code>(gdb) s</code></td><td><code>(lldb) thread step-in</code><code>(lldb) step</code><code>(lldb) s</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Do a source-level single step over in the currently selected thread.</td></tr>
+<tr><td><code>(gdb) next</code><code>(gdb) n</code></td><td><code>(lldb) thread step-over</code><code>(lldb) next</code><code>(lldb) n</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Do an instruction-level single step in the currently selected thread.</td></tr>
+<tr><td><code>(gdb) stepi</code><code>(gdb) si</code></td><td><code>(lldb) thread step-inst</code><code>(lldb) si</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Do an instruction-level single step over in the currently selected thread.</td></tr>
+<tr><td><code>(gdb) nexti</code><code>(gdb) ni</code></td><td><code>(lldb) thread step-inst-over</code><code>(lldb) ni</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Step out of the currently selected frame.</td></tr>
+<tr><td><code>(gdb) finish</code></td><td><code>(lldb) thread step-out</code><code>(lldb) finish</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Backtrace and disassemble every time you stop.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) target stop-hook add</code><code>Enter your stop hook command(s). Type 'DONE' to end.</code><code>&gt; bt</code><code>&gt; disassemble --pc</code><code>&gt; DONE</code><code>Stop hook #1 added.</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="ex-breakpoint">Breakpoint Commands</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">Set a breakpoint at all functions named <code>main</code>.</td></tr>
+<tr><td><code>(gdb) break main</code></td><td><code>(lldb) breakpoint set --name main</code><code>(lldb) br s -n main</code><code>(lldb) b main</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a breakpoint in file <code>test.c</code> at line 12.</td></tr>
+<tr><td><code>(gdb) break test.c:12</code></td><td><code>(lldb) breakpoint set --file test.c --line 12</code><code>(lldb) br s -f test.c -l 12</code><code>(lldb) b test.c:12</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a breakpoint at all C++ methods whose basename is <code>main</code>.</td></tr>
+<tr><td><code>(gdb) break main</code><code>(Note: This will break on any C functions named <code>main</code>.)</code></td><td><code>(lldb) breakpoint set --method main</code><code>(lldb) br s -M main</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a breakpoint at an Objective-C function: <code>-[NSString stringWithFormat:]</code>.</td></tr>
+<tr><td><code>(gdb) break -[NSString stringWithFormat:]</code></td><td><code>(lldb) breakpoint set --name "-[NSString stringWithFormat:]"</code><code>(lldb) b -[NSString stringWithFormat:]</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a breakpoint at all Objective-C methods whose selector is <code>count</code>.</td></tr>
+<tr><td><code>(gdb) break count</code><code>(Note: This will break on any C or C++ functions named <code>count</code>.)</code></td><td><code>(lldb) breakpoint set --selector count</code><code>(lldb) br s -S count</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a breakpoint by a regular expression on a function name.</td></tr>
+<tr><td><code>(gdb) rbreak regular-expression</code></td><td><code>(lldb) breakpoint set --regex regular-expression</code><code>(lldb) br s -r regular-expression</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a breakpoint by a regular expression on a source file's contents.</td></tr>
+<tr><td><code>(gdb) shell grep -e -n pattern source-file</code><code>(gdb) break source-file:CopyLineNumbers</code></td><td><code>(lldb) breakpoint set --source-pattern regular-expression --file SourceFile</code><code>(lldb) br s -p regular-expression -f file</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">List all breakpoints.</td></tr>
+<tr><td><code>(gdb) info break</code></td><td><code>(lldb) breakpoint list</code><code>(lldb) br l</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Delete a breakpoint.</td></tr>
+<tr><td><code>(gdb) delete 1</code></td><td><code>(lldb) breakpoint delete 1</code><code>(lldb) br del 1</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="ex-watchpoint">Watchpoint Commands</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">Set a watchpoint on a variable when it is written to.</td></tr>
+<tr><td><code>(gdb) watch global_var</code></td><td><code>(lldb) watchpoint set variable global_var</code><code>(lldb) wa s v global_var</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a watchpoint on a memory location when it is written to.</td></tr>
+<tr><td><code>(gdb) watch -location g_char_ptr</code></td><td><code>(lldb) watchpoint set expression -- my_ptr</code><code>(lldb) wa s e -- my_ptr</code><br>Note: The size of the region to watch for defaults to the pointer size if no <code>-x byte_size</code> is specified. This command takes "raw" input, evaluated as an expression returning an unsigned integer pointing to the start of the region, after the option terminator (<code>--</code>).</td></tr>
+
+<tr class="row-desc"><td colspan="2">Set a condition on a watchpoint.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) watch set var global</code><code>(lldb) watchpoint modify -c '(global==5)'</code><code>(lldb) c</code><code>...</code><code>(lldb) bt</code><code>* thread #1: tid = 0x1c03, 0x0000000100000ef5 a.out`modify + 21 at main.cpp:16, stop reason = watchpoint 1</code><code>  frame #0: 0x0000000100000ef5 a.out`modify + 21 at main.cpp:16</code><code>  frame #1: 0x0000000100000eac a.out`main + 108 at main.cpp:25</code><code>  frame #2: 0x00007fff8ac9c7e1 libdyld.dylib`start + 1</code><code>(int32_t) global = 5</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">List all watchpoints.</td></tr>
+<tr><td><code>(gdb) info break</code></td><td><code>(lldb) watchpoint list</code><code>(lldb) watch l</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Delete a watchpoint.</td></tr>
+<tr><td><code>(gdb) delete 1</code></td><td><code>(lldb) watchpoint delete 1</code><code>(lldb) watch del 1</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="ex-variables">Examining Variables</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">Show the arguments and local variables for the current frame.</td></tr>
+<tr><td><code>(gdb) info args</code><br>and<br><code>(gdb) info locals</code></td><td><code>(lldb) frame variable</code><code>(lldb) fr v</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the local variables for the current frame.</td></tr>
+<tr><td><code>(gdb) info locals</code></td><td><code>(lldb) frame variable --no-args</code><code>(lldb) fr v -a</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the contents of the local variable <code>bar</code>.</td></tr>
+<tr><td><code>(gdb) p bar</code></td><td><code>(lldb) frame variable bar</code><code>(lldb) fr v bar</code><code>(lldb) p bar</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the contents of the local variable <code>bar</code> formatted as hex.</td></tr>
+<tr><td><code>(gdb) p/x bar</code></td><td><code>(lldb) frame variable --format x bar</code><code>(lldb) fr v -f x bar</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the contents of the global variable <code>baz</code>.</td></tr>
+<tr><td><code>(gdb) p baz</code></td><td><code>(lldb) target variable baz</code><code>(lldb) ta v baz</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the global/static variables defined in the current source file.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) target variable</code><code>(lldb) ta v</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Display the variables <code>argc</code> and <code>argv</code> every time you stop.</td></tr>
+<tr><td><code>(gdb) display argc</code><code>(gdb) display argv</code></td><td><code>(lldb) target stop-hook add --one-liner "frame variable argc argv"</code><code>(lldb) ta st a -o "fr v argc argv"</code><code>(lldb) display argc</code><code>(lldb) display argv</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Display the variables <code>argc</code> and <code>argv</code> only when you stop in the function named <code>main</code>.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) target stop-hook add --name main --one-liner "frame variable argc argv"</code><code>(lldb) ta st a -n main -o "fr v argc argv"</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Display the variable <code>*this</code> only when you stop in the C class named <code>MyClass</code>.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) target stop-hook add --classname MyClass --one-liner "frame variable *this"</code><code>(lldb) ta st a -c MyClass -o "fr v *this"</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="ex-expressions">Evaluating Expressions</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">Evaluate a generalized expression in the current frame.</td></tr>
+<tr><td><code>(gdb) print (int) printf ("Print nine: %d.", 4 + 5)</code><br>Or if you don't want to see void returns:<br><code>(gdb) call (int) printf ("Print nine: %d.", 4 + 5)</code></td><td><code>(lldb) expr (int) printf ("Print nine: %d.", 4 + 5)</code><br>Or use the <code>print</code> alias:<br><code>(lldb) print (int) printf ("Print nine: %d.", 4 + 5)</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Create and assign a value to a convenience variable.</td></tr>
+<tr><td><code>(gdb) set $foo = 5</code><code>(gdb) set variable $foo = 5</code><br>Or use the <code>print</code> command:<br><code>(gdb) print $foo = 5</code><br>Or use the <code>call</code> command:<br><code>(gdb) call $foo = 5</code><br>To specify the type of the variable:<br><code>(gdb) set $foo = (unsigned int) 5</code></td><td>LLDB evaluates a variable declaration expression as you would write it in C:<br><code>(lldb) expr unsigned int $foo = 5</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Print the Objective-C <code>description</code> of an object.</td></tr>
+<tr><td><code>(gdb) po [SomeClass returnAnObject]</code></td><td><code>(lldb) expr -O -- [SomeClass returnAnObject]</code><br>Or use the <code>po</code> alias:<br><code>(lldb) po [SomeClass returnAnObject]</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Print the dynamic type of the result of an expression.</td></tr>
+<tr><td><code>(gdb) set print object 1</code><code>(gdb) p someCPPObjectPtrOrReference</code><br>Note: Only for C++ objects.</td><td><code>(lldb) expr -d run-target -- [SomeClass returnAnObject]</code><code>(lldb) expr -d run-target -- someCPPObjectPtrOrReference</code><br>Or set dynamic type printing as default:<br><code>(lldb) settings set target.prefer-dynamic run-target</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Call a function to stop at a breakpoint in the function.</td></tr>
+<tr><td><code>(gdb) set unwindonsignal 0</code><code>(gdb) p function_with_a_breakpoint()</code></td><td><code>(lldb) expr -u 0 -- function_with_a_breakpoint()</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="ex-threads">Examining Thread State</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">Show the stack backtrace for the current thread.</td></tr>
+<tr><td><code>(gdb) bt</code></td><td><code>(lldb) thread backtrace</code><code>(lldb) bt</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the stack backtraces for all threads.</td></tr>
+<tr><td><code>(gdb) thread apply all bt</code></td><td><code>(lldb) thread backtrace all</code><code>(lldb) bt all</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Backtrace the first five frames of the current thread.</td></tr>
+<tr><td><code>(gdb) bt 5</code></td><td><code>(lldb) thread backtrace -c 5</code><code>(lldb) bt 5 (lldb-169 and later)</code><code>(lldb) bt -c 5 (lldb-168 and earlier)</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Select a different stack frame by index for the current thread.</td></tr>
+<tr><td><code>(gdb) frame 12</code></td><td><code>(lldb) frame select 12</code><code>(lldb) fr s 12</code><code>(lldb) f 12</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">List information about the currently selected frame in the current thread.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) frame info</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Select the stack frame that called the current stack frame.</td></tr>
+<tr><td><code>(gdb) up</code></td><td><code>(lldb) up</code><code>(lldb) frame select --relative=1</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Select the stack frame that is called by the current stack frame.</td></tr>
+<tr><td><code>(gdb) down</code></td><td><code>(lldb) down</code><code>(lldb) frame select --relative=-1</code><code>(lldb) fr s -r-1</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Select a different stack frame using a relative offset.</td></tr>
+<tr><td><code>(gdb) up 2</code><code>(gdb) down 3</code></td><td><code>(lldb) frame select --relative 2</code><code>(lldb) fr s -r2</code><br><br><code>(lldb) frame select --relative -3</code><code>(lldb) fr s -r-3</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the general-purpose registers for the current thread.</td></tr>
+<tr><td><code>(gdb) info registers</code></td><td><code>(lldb) register read</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Write a new decimal value <code>123</code> to the current thread register <code>rax</code>.</td></tr>
+<tr><td><code>(gdb) p $rax = 123</code></td><td><code>(lldb) register write rax 123</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Skip 8 bytes ahead of the current program counter (instruction pointer).</td></tr>
+<tr><td><code>(gdb) jump *$pc+8</code></td><td><code>(lldb) register write pc `$pc+8`</code><br>The LLDB command uses backticks to evaluate an expression and insert the scalar result.</td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the general-purpose registers for the current thread formatted as signed decimal.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) register read --format i</code><code>(lldb) re r -f i</code><br>LLDB now supports the GDB shorthand format syntax, but no space is permitted after the command:<br><code>(lldb) register read/d</code><br>Note: LLDB tries to use the same format characters as <code>printf(3)</code> when possible. Type <code>help format</code> to see the full list of format specifiers.</td></tr>
+
+<tr class="row-desc"><td colspan="2">Show all registers in all register sets for the current thread.</td></tr>
+<tr><td><code>(gdb) info all-registers</code></td><td><code>(lldb) register read --all</code><code>(lldb) re r -a</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the values for the registers named <code>rax</code>, <code>rsp</code> and <code>rbp</code> in the current thread.</td></tr>
+<tr><td><code>(gdb) info all-registers rax rsp rbp</code></td><td><code>(lldb) register read rax rsp rbp</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show the values for the register named <code>rax</code> in the current thread formatted as binary.</td></tr>
+<tr><td><code>(gdb) p/t $rax</code></td><td><code>(lldb) register read --format binary rax</code><code>(lldb) re r -f b rax</code><br>LLDB now supports the GDB shorthand format syntax, but no space is permitted after the command:<br><code>(lldb) register read/t rax</code><code>(lldb) p/t $rax</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Read memory from address <code>0xbffff3c0</code> and show four hex <code>uint32_t</code> values.</td></tr>
+<tr><td><code>(gdb) x/4xw 0xbffff3c0</code></td><td><code>(lldb) memory read --size 4 --format x --count 4 0xbffff3c0</code><code>(lldb) me r -s4 -fx -c4 0xbffff3c0</code><code>(lldb) x -s4 -fx -c4 0xbffff3c0</code><br>LLDB now supports the GDB shorthand format syntax, but no space is permitted after the command:<br><code>(lldb) memory read/4xw 0xbffff3c0</code><code>(lldb) x/4xw 0xbffff3c0</code><code>(lldb) memory read --gdb-format 4xw 0xbffff3c0</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Read memory starting at the expression <code>argv[0]</code>.</td></tr>
+<tr><td><code>(gdb) x argv[0]</code></td><td><code>(lldb) memory read `argv[0]`</code><br>Note that any command can inline a scalar expression result (as long as the target is stopped) using backticks around any expression:<br><code>(lldb) memory read --size `sizeof(int)` `argv[0]`</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Read 512 bytes of memory from address <code>0xbffff3c0</code> and save results to a local file as text.</td></tr>
+<tr><td><code>(gdb) set logging on</code><code>(gdb) set logging file /tmp/mem.txt</code><code>(gdb) x/512bx 0xbffff3c0</code><code>(gdb) set logging off</code></td><td><code>(lldb) memory read --outfile /tmp/mem.txt --count 512 0xbffff3c0</code><code>(lldb) me r -o/tmp/mem.txt -c512 0xbffff3c0</code><code>(lldb) x/512bx -o/tmp/mem.txt 0xbffff3c0</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Save binary memory data to a file starting at <code>0x1000</code> and ending at <code>0x2000</code>.</td></tr>
+<tr><td><code>(gdb) dump memory /tmp/mem.bin 0x1000 0x2000</code></td><td><code>(lldb) memory read --outfile /tmp/mem.bin --binary 0x1000 0x1200</code><code>(lldb) me r -o /tmp/mem.bin -b 0x1000 0x1200</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Disassemble the current function for the current frame.</td></tr>
+<tr><td><code>(gdb) disassemble</code></td><td><code>(lldb) disassemble --frame</code><code>(lldb) di -f</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Disassemble any functions named <code>main</code>.</td></tr>
+<tr><td><code>(gdb) disassemble main</code></td><td><code>(lldb) disassemble --name main</code><code>(lldb) di -n main</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Disassemble an address range.</td></tr>
+<tr><td><code>(gdb) disassemble 0x1eb8 0x1ec3</code></td><td><code>(lldb) disassemble --start-address 0x1eb8 --end-address 0x1ec3</code><code>(lldb) di -s 0x1eb8 -e 0x1ec3</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Disassemble 20 instructions from a given address.</td></tr>
+<tr><td><code>(gdb) x/20i 0x1eb8</code></td><td><code>(lldb) disassemble --start-address 0x1eb8 --count 20</code><code>(lldb) di -s 0x1eb8 -c 20</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Show mixed source and disassembly for the current function for the current frame.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) disassemble --frame --mixed</code><code>(lldb) di -f -m</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Disassemble the current function for the current frame and show the opcode bytes.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) disassemble --frame --bytes</code><code>(lldb) di -f -b</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Disassemble the current source line for the current frame.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) disassemble --line</code><code>(lldb) di -l</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="ex-libraries">Executable and Shared Library Query Commands</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">List the main executable and all dependent shared libraries.</td></tr>
+<tr><td><code>(gdb) info shared</code></td><td><code>(lldb) image list</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Look up information for a raw address in the executable or any shared libraries.</td></tr>
+<tr><td><code>(gdb) info symbol 0x1ec4</code></td><td><code>(lldb) image lookup --address 0x1ec4</code><code>(lldb) im loo -a 0x1ec4</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Look up functions matching a regular expression in a binary.</td></tr>
+<tr><td><code>(gdb) info function &lt;FUNC_REGEX&gt;</code></td><td>This one finds debug symbols:<br><code>(lldb) image lookup -r -n &lt;FUNC_REGEX&gt;</code><br>This one finds non-debug symbols:<br><code>(lldb) image lookup -r -s &lt;FUNC_REGEX&gt;</code><br>Provide a list of binaries as arguments to limit the search.</td></tr>
+
+<tr class="row-desc"><td colspan="2">Look up information for an address in <code>a.out</code> only.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) image lookup --address 0x1ec4 a.out</code><code>(lldb) im loo -a 0x1ec4 a.out</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Look up information for a type <code>Point</code> by name.</td></tr>
+<tr><td><code>(gdb) ptype Point</code></td><td><code>(lldb) image lookup --type Point</code><code>(lldb) im loo -t Point</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Dump all sections from the main executable and any shared libraries.</td></tr>
+<tr><td><code>(gdb) maintenance info sections</code></td><td><code>(lldb) image dump sections</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Dump all sections in the <code>a.out</code> module.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) image dump sections a.out</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Dump all symbols from the main executable and any shared libraries.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) image dump symtab</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Dump all symbols in <code>a.out</code> and <code>liba.so</code>.</td></tr>
+<tr><td>&#8212;</td><td><code>(lldb) image dump symtab a.out liba.so</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="ex-misc">Miscellaneous</h2>
+
+<table class="cmd-table">
+<thead><tr><th>GDB</th><th>LLDB</th></tr></thead>
+<tbody>
+<tr class="row-desc"><td colspan="2">Echo text to the screen.</td></tr>
+<tr><td><code>(gdb) echo Here is some text\n</code></td><td><code>(lldb) script print "Here is some text"</code></td></tr>
+
+<tr class="row-desc"><td colspan="2">Remap source file pathnames for the debug session.</td></tr>
+<tr><td><code>(gdb) set pathname-substitutions /buildbot/path /my/path</code></td><td><code>(lldb) settings set target.source-map /buildbot/path /my/path</code><br>Note: If your source files are no longer located in the same location as when the program was built&#8212;maybe the program was built on a different computer&#8212;you need to tell the debugger how to find the sources at the local file path instead of the build system file path.</td></tr>
+
+<tr class="row-desc"><td colspan="2">Supply a catchall directory to search for source files in.</td></tr>
+<tr><td><code>(gdb) directory /my/path</code></td><td>(No equivalent command yet.)</td></tr>
+</tbody>
+</table>
+
+<div class="page-nav" style="margin-top:36px;">
+  <a href="#page-standalone">Next ›</a>
+  <a href="#page-basics">‹ Previous</a>
+</div>
+
+<hr>
+<p style="font-size:12px;color:#888;">Copyright &#169; 2013 Apple Inc. All Rights Reserved. <a href="http://www.apple.com/legal/internet-services/terms/site.html">Terms of Use</a> | <a href="http://www.apple.com/privacy/">Privacy Policy</a> | Updated: 2013-09-18</p>
+
+</section>
+
+
+<!-- ══════════════════════════════════════
+     PAGE 4: Using LLDB as a Standalone Debugger
+     Source: lldb-terminal-workflow-tutorial.html
+══════════════════════════════════════ -->
+<section class="page" id="page-standalone">
+
+<div class="page-nav">
+  <a href="#page-intro">‹ Previous</a>
+</div>
+
+<h1 id="standalone">Using LLDB as a Standalone Debugger</h1>
+
+<p>This chapter describes the workflow and operations in a basic Terminal debugging session. Where appropriate, LLDB operations are compared to similar GDB operations.</p>
+
+<p>Most of the time, you use the LLDB debugger indirectly through the Xcode debugging features, and you issue LLDB commands using the Xcode console pane. But for development of open source and other non-GUI based application debugging, LLDB is used from a Terminal window as a conventional command line debugger. To use LLDB as a command-line debugger, you should understand how to:</p>
+
+<ul>
+  <li>Load a process for debugging</li>
+  <li>Attach a running process to LLDB</li>
+  <li>Set breakpoints and watchpoints</li>
+  <li>Control the process execution</li>
+  <li>Navigate in the process being debugged</li>
+  <li>Inspect variables for state and value</li>
+  <li>Execute alternative code</li>
+</ul>
+
+<p>The Xcode IDE automates many of these operations with its full integration of LLDB into the source editing, build, and "run for debugging" cycle with graphical controls. Knowing how these operations work from the command line also helps you understand and use the full power of the LLDB debugger in the Xcode console pane.</p>
+
+<h2 id="sa-specify">Specifying the Program to Debug</h2>
+
+<p>First, you need to set the program to debug. As with GDB, you can start LLDB and specify the file you want to debug using the command line. Type:</p>
+
+<div class="code-block">$ lldb /Projects/Sketch/build/Debug/Sketch.app
+Current executable set to '/Projects/Sketch/build/Debug/Sketch.app' (x86_64).</div>
+
+<p>Or you can specify the executable file to debug after it is already running using the <code>file</code> command:</p>
+
+<div class="code-block">$ lldb
+(lldb) file /Projects/Sketch/build/Debug/Sketch.app
+Current executable set to '/Projects/Sketch/build/Debug/Sketch.app' (x86_64).</div>
+
+<h2 id="sa-breakpoints">Setting Breakpoints</h2>
+
+<p>Next, you might want to set up breakpoints to begin your debugging after the process has been launched. Setting breakpoints was discussed briefly in <a href="#basics-syntax">LLDB Command Structure</a>. To see all the options for <code>breakpoint</code> setting, use <code>help breakpoint set</code>. For instance, type the following to set a breakpoint on any use of a method named <code>alignLeftEdges:</code>:</p>
+
+<div class="code-block">(lldb) breakpoint set --selector alignLeftEdges:
+Breakpoint created: 1: name = 'alignLeftEdges:', locations = 1, resolved = 1</div>
+
+<p>To find out which breakpoints you've set, type the <code>breakpoint list</code> command and examine what it returns as follows:</p>
+
+<div class="code-block">(lldb) breakpoint list
+Current breakpoints:
+1: name = 'alignLeftEdges:', locations = 1, resolved = 1
+  1.1: where = Sketch`-[SKTGraphicView alignLeftEdges:] + 33 at /Projects/Sketch/SKTGraphicView.m:1405, address = 0x0000000100010d5b, resolved, hit count = 0</div>
+
+<p>In LLDB there are two parts to a breakpoint: the logical specification of the breakpoint, which is what the user provides to the <code>breakpoint set</code> command, and the locations in the code that match that specification. For example, a break by selector sets a breakpoint on all the methods that implement that selector in the classes in your program. Similarly, a file and line breakpoint might result in multiple locations if that file and line are included inline in different places in your code.</p>
+
+<p>One piece of information provided by the <code>breakpoint list</code> command output is that the logical breakpoint has an integer identifier, and its locations have identifiers within the logical breakpoint. The two are joined by a period (<code>.</code>)&#8212;for example, <code>1.1</code> in the example above.</p>
+
+<p>Because the logical breakpoints remain live, if another shared library is loaded that includes another implementation of the <code>alignLeftEdges:</code> selector, the new location is added to breakpoint <code>1</code> (that is, a <code>1.2</code> breakpoint is set on the newly loaded selector).</p>
+
+<p>The other piece of information in the breakpoint listing is whether the breakpoint location was <em>resolved</em> or not. A location is resolved when the file address it corresponds to gets loaded into the program being debugged. For instance, if you set a breakpoint in a shared library that later is unloaded, that breakpoint location remains but it is no longer resolved.</p>
+
+<p>LLDB acts like GDB with the command:</p>
+
+<div class="code-block">(gdb) set breakpoint pending on</div>
+
+<p>Like GDB, LLDB always makes a breakpoint from your specification, even if it didn't find any locations that match the specification. To determine whether the expression has been resolved, check the locations field using <code>breakpoint list</code>. LLDB reports the breakpoint as <code>pending</code> when you set it. By looking at the breakpoints with <code>pending</code> status, you can determine whether you've made a typo in defining the breakpoint when no locations are found by examining the <code>breakpoint set</code> output. For example:</p>
+
+<div class="code-block">(lldb) breakpoint set --file foo.c --line 12
+Breakpoint created: 2: file ='foo.c', line = 12, locations = 0 (pending)
+WARNING: Unable to resolve breakpoint to any actual locations.</div>
+
+<p>Either on all the locations generated by your logical breakpoint, or on any one of the particular locations that logical breakpoint resolved to, you can delete, disable, set conditions, and ignore counts using breakpoint-triggered commands. For instance, if you want to add a command to print a backtrace when LLDB hit the breakpoint numbered <code>1.1</code>, you execute the following command:</p>
+
+<div class="code-block">(lldb) breakpoint command add 1.1
+Enter your debugger command(s). Type 'DONE' to end.
+&gt; bt
+&gt; DONE</div>
+
+<p>By default, the <code>breakpoint command add</code> command takes LLDB command-line commands. To specify this default explicitly, pass the <code>--command</code> option (<code>breakpoint command add --command ...</code>). Use the <code>--script</code> option if you implement your breakpoint command using a Python script instead. The LLDB help system has extensive information explaining <code>breakpoint command add</code>.</p>
+
+<h2 id="sa-watchpoints">Setting Watchpoints</h2>
+
+<p>In addition to breakpoints, LLDB supports watchpoints to monitor variables without stopping the running process. Use <code>help watchpoint</code> to see all the commands for watchpoint manipulations. For instance, enter the following commands to watch a variable named <code>global</code> for a write operation, and to stop only if the condition '<code>(global==5)</code>' is true:</p>
+
+<div class="code-block">(lldb) watch set var global
+Watchpoint created: Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
+   declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
+(lldb) watch modify -c '(global==5)'
+(lldb) watch list
+Current watchpoints:
+Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
+    declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
+    condition = '(global==5)'
+(lldb) c
+Process 15562 resuming
+(lldb) about to write to 'global'...
+Process 15562 stopped and was programmatically restarted.
+Process 15562 stopped and was programmatically restarted.
+Process 15562 stopped and was programmatically restarted.
+Process 15562 stopped and was programmatically restarted.
+Process 15562 stopped
+* thread #1: tid = 0x1c03, 0x0000000100000ef5 a.out`modify + 21 at main.cpp:16, stop reason = watchpoint 1
+    frame #0: 0x0000000100000ef5 a.out`modify + 21 at main.cpp:16
+   13
+   14      static void modify(int32_t &amp;var) {
+   15          ++var;
+-&gt; 16      }
+   17
+   18      int main(int argc, char** argv) {
+   19          int local = 0;
+(lldb) bt
+* thread #1: tid = 0x1c03, 0x0000000100000ef5 a.out`modify + 21 at main.cpp:16, stop reason = watchpoint 1
+    frame #0: 0x0000000100000ef5 a.out`modify + 21 at main.cpp:16
+    frame #1: 0x0000000100000eac a.out`main + 108 at main.cpp:25
+    frame #2: 0x00007fff8ac9c7e1 libdyld.dylib`start + 1
+(lldb) frame var global
+(int32_t) global = 5
+(lldb) watch list -v
+Current watchpoints:
+Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
+    declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
+    condition = '(global==5)'
+    hw_index = 0  hit_count = 5     ignore_count = 0
+(lldb)</div>
+
+<h2 id="sa-launch">Launching the Program with LLDB</h2>
+
+<p>Once you've specified what program you are going to debug and set a breakpoint to halt it at some interesting location, you need to start (or <em>launch</em>) it into a running process. To launch a program with LLDB, use the <code>process launch</code> command or one of its built-in aliases:</p>
+
+<div class="code-block">(lldb) process launch
+(lldb) run
+(lldb) r</div>
+
+<p>You can also attach LLDB to a process that is already running&#8212;the process running the executable program file you specified earlier&#8212;by using either the process ID or the process name. When attaching to a process by name, LLDB supports the <code>--waitfor</code> option. This option tells LLDB to wait for the next process that has that name to appear and then attach to it. For example, here are three commands to attach to the <code>Sketch</code> process, assuming that the process ID is <code>123</code>:</p>
+
+<div class="code-block">(lldb) process attach --pid 123
+(lldb) process attach --name Sketch
+(lldb) process attach --name Sketch --waitfor</div>
+
+<p>After you launch or attach LLDB to a process, the process might stop for some reason. For example:</p>
+
+<div class="code-block">(lldb) process attach -p 12345
+Process 46915 Attaching
+Process 46915 Stopped
+1 of 3 threads stopped with reasons:
+* thread #1: tid = 0x2c03, 0x00007fff85cac76a, where = libSystem.B.dylib`__getdirentries64 + 10,
+stop reason = signal = SIGSTOP, queue = com.apple.main-thread</div>
+
+<p>Note the line that says "<code>1 of 3 threads stopped with reasons:</code>" and the lines that follow it. In a multithreaded environment, it is very common for more than one thread to hit your breakpoint(s) before the kernel actually returns control to the debugger. In that case, you will see all the threads that stopped for the reason listed in the stop message.</p>
+
+<h2 id="sa-control">Controlling Your Program</h2>
+
+<p>After launching, LLDB allows the program to continue until you hit a breakpoint. The primitive commands for process control all exist under the <code>thread</code> command hierarchy. Here's one example:</p>
+
+<div class="code-block">(lldb) thread continue
+Resuming thread 0x2c03 in process 46915
+Resuming process 46915
+(lldb)</div>
+
+<div class="note-box"><span class="label">Note: </span>In its present version (lldb-300.2.24), LLDB can operate on only one thread at a time, but it is designed to support saying "step over the function in Thread 1, and step into the function in Thread 2, and continue Thread 3", and so on in a future revision.</div>
+
+<p>For convenience, all the stepping commands have easy aliases. For example, <code>thread continue</code> is invoked with just <code>c</code>, and the same goes for the other stepping program commands&#8212;which are much the same as in GDB. For example:</p>
+
+<div class="code-block">(lldb) thread step-in    // The same as "step" or "s" in GDB.
+(lldb) thread step-over  // The same as "next" or "n" in GDB.
+(lldb) thread step-out   // The same as "finish" or "f" in GDB.</div>
+
+<p>By default, LLDB has defined aliases to all common GDB process control commands (for instance, <code>s</code>, <code>step</code>, <code>n</code>, <code>next</code>, <code>finish</code>). If you find that GDB process control commands you are accustomed to using don't exist, you can add them to the <code>~/.lldbinit</code> file using <code>command alias</code>.</p>
+
+<p>LLDB also supports the <em>step by instruction</em> versions:</p>
+
+<div class="code-block">(lldb) thread step-inst       // The same as "stepi" / "si" in GDB.
+(lldb) thread step-over-inst  // The same as "nexti" / "ni" in GDB.</div>
+
+<p>LLDB has a <em>run until line</em> or <em>frame exit</em> stepping mode:</p>
+
+<div class="code-block">(lldb) thread until 100</div>
+
+<p>This command runs the thread until the current frame reaches line 100. If the code skips around line 100 in the course of running, execution stops when the frame is popped off the stack. This command is a close equivalent to the GDB <code>until</code> command.</p>
+
+<p>LLDB, by default, shares the terminal with the process being debugged. In this mode, much like debugging with GDB, when the process is running anything you type goes to the STDIN of the process being debugged. To interrupt that process, type CTRL+C.</p>
+
+<p>However, if you attach to a process&#8212;or launch a process&#8212;with the <code>--no-stdin</code> option, the command interpreter is always available to enter commands. Always having an <code>(lldb)</code> prompt might be a little disconcerting to GDB users at first, but it is useful. Using the <code>--no-stdin</code> option allows you to set a breakpoint, watchpoint, and so forth, without having to explicitly interrupt the program you are debugging:</p>
+
+<div class="code-block">(lldb) process continue
+(lldb) breakpoint set --name stop_here</div>
+
+<p>There are many LLDB commands that won't work while the process being debugged is running: The command interpreter lets you know when a command is inappropriate most of the time. (If you find any instances where the command interpreter isn't flagging a problem case, please file a bug: <a href="http://bugreport.apple.com">bugreport.apple.com</a>.)</p>
+
+<p>The commands that work while a process is running include interrupting the process to halt execution (<code>process interrupt</code>), getting the process status (<code>process status</code>), breakpoint setting and clearing (<code>breakpoint [set|clear|enable|disable|list] ...</code>), and memory reading and writing (<code>memory [read|write] ...</code>).</p>
+
+<p>The subject of disabling STDIN for a process running in LLDB presents a good opportunity to show how to set debugger properties in general. For example, if you always want to run in <code>--no-stdin</code> mode, set it as a generic process property using the LLDB <code>settings</code> command. The LLDB <code>settings</code> command is equivalent to the GDB <code>set</code> command. To do this, type:</p>
+
+<div class="code-block">(lldb) settings set target.process.disable-stdio true</div>
+
+<p>In LLDB, <code>settings</code> are organized hierarchically, enabling you to discover them easily. In addition, almost anywhere that you can specify a setting on a generic entity (threads, for example), you can also apply the option to a particular instance. View the current LLDB settings with the <code>settings list</code> command. You can explore how the <code>settings</code> command works in detail using the <code>help settings</code> command.</p>
+
+<h2 id="sa-threads">Examining Thread State</h2>
+
+<p>After a process has stopped, LLDB chooses a current thread and a current frame in that thread (on stop, this is always the bottommost frame). Many of the commands for inspecting state work on this current thread or frame.</p>
+
+<p>To inspect the current state of the process, start with these threads:</p>
+
+<div class="code-block">(lldb) thread list
+Process 46915 state is Stopped
+* thread #1: tid = 0x2c03, 0x00007fff85cac76a, where = libSystem.B.dylib`__getdirentries64 + 10, stop reason = signal = SIGSTOP, queue = com.apple.main-thread
+  thread #2: tid = 0x2e03, 0x00007fff85cbb08a, where = libSystem.B.dylib`kevent + 10, queue = com.apple.libdispatch-manager
+  thread #3: tid = 0x2f03, 0x00007fff85cbbeaa, where = libSystem.B.dylib`__workq_kernreturn + 10</div>
+
+<p>The asterisk (<code>*</code>) indicates that <code>thread #1</code> is the current thread. To get a backtrace for that thread, enter the <code>thread backtrace</code> command:</p>
+
+<div class="code-block">(lldb) thread backtrace
+
+thread #1: tid = 0x2c03, stop reason = breakpoint 1.1, queue = com.apple.main-thread
+ frame #0: 0x0000000100010d5b, where = Sketch`-[SKTGraphicView alignLeftEdges:] + 33 at /Projects/Sketch/SKTGraphicView.m:1405
+ frame #1: 0x00007fff8602d152, where = AppKit`-[NSApplication sendAction:to:from:] + 95
+ frame #2: 0x00007fff860516be, where = AppKit`-[NSMenuItem _corePerformAction] + 365
+ frame #3: 0x00007fff86051428, where = AppKit`-[NSCarbonMenuImpl performActionWithHighlightingForItemAtIndex:] + 121
+ frame #4: 0x00007fff860370c1, where = AppKit`-[NSMenu performKeyEquivalent:] + 272
+ frame #5: 0x00007fff86035e69, where = AppKit`-[NSApplication _handleKeyEquivalent:] + 559
+ frame #6: 0x00007fff85f06aa1, where = AppKit`-[NSApplication sendEvent:] + 3630
+ frame #7: 0x00007fff85e9d922, where = AppKit`-[NSApplication run] + 474
+ frame #8: 0x00007fff85e965f8, where = AppKit`NSApplicationMain + 364
+ frame #9: 0x0000000100015ae3, where = Sketch`main + 33 at /Projects/Sketch/SKTMain.m:11
+ frame #10: 0x0000000100000f20, where = Sketch`start + 52</div>
+
+<p>Provide a list of threads to backtrace, or use the keyword <code>all</code> to see all threads.</p>
+
+<div class="code-block">(lldb) thread backtrace all</div>
+
+<p>Set the selected thread, the one which will be used by default in all the commands in the next section, with the <code>thread select</code> command, where the thread index is the one shown in the <code>thread list</code> listing, using</p>
+
+<div class="code-block">(lldb) thread select 2</div>
+
+<h2 id="sa-frames">Examining the Stack Frame State</h2>
+
+<p>The most convenient way to inspect a frame's arguments and local variables is to use the <code>frame variable</code> command.</p>
+
+<div class="code-block">(lldb) frame variable
+self = (SKTGraphicView *) 0x0000000100208b40
+_cmd = (struct objc_selector *) 0x000000010001bae1
+sender = (id) 0x00000001001264e0
+selection = (NSArray *) 0x00000001001264e0
+i = (NSUInteger) 0x00000001001264e0
+c = (NSUInteger) 0x00000001001253b0</div>
+
+<p>If you don't specify any variable names, all arguments and local variables are shown. If you call <code>frame variable</code>, passing in the name or names of particular local variables, only those variables are printed. For instance:</p>
+
+<div class="code-block">(lldb) frame variable self
+(SKTGraphicView *) self = 0x0000000100208b40</div>
+
+<p>You can pass in a path to some subelement of one of the available locals, and that subelement is printed. For instance:</p>
+
+<div class="code-block">(lldb) frame variable self.isa
+(struct objc_class *) self.isa = 0x0000000100023730</div>
+
+<p>The <code>frame variable</code> command is not a full expression parser, but it does support a few simple operations such as <code>&amp;</code>, <code>*</code>, <code>-&gt;</code>, <code>[]</code> (no overloaded operators). The array brackets can be used on pointers to treat pointers as arrays. For example:</p>
+
+<div class="code-block">(lldb) frame variable *self
+(SKTGraphicView *) self = 0x0000000100208b40
+(NSView) NSView = {
+(NSResponder) NSResponder = {
+...
+
+(lldb) frame variable &amp;self
+(SKTGraphicView **) &amp;self = 0x0000000100304ab
+
+(lldb) frame variable argv[0]
+(char const *) argv[0] = 0x00007fff5fbffaf8 "/Projects/Sketch/build/Debug/Sketch.app/Contents/MacOS/Sketch"</div>
+
+<p>The <code>frame variable</code> command performs "object printing" operations on variables. Currently, LLDB supports only Objective-C printing, using the object's <code>description</code> method. Turn this feature on by passing the <code>-O</code> flag to <code>frame variable</code>.</p>
+
+<div class="code-block">(lldb) frame variable -O self
+(SKTGraphicView *) self = 0x0000000100208b40 &lt;SKTGraphicView: 0x100208b40&gt;</div>
+
+<p>To select another frame to view, use the <code>frame select</code> command.</p>
+
+<div class="code-block">(lldb) frame select 9
+frame #9: 0x0000000100015ae3, where = Sketch`function1 + 33 at /Projects/Sketch/SKTFunctions.m:11</div>
+
+<p>To move the view of the process up and down the stack, pass the <code>--relative</code> option (short form <code>-r</code>) . LLDB has the built-in aliases <code>u</code> and <code>d</code>, which behave like their GDB equivalents.</p>
+
+<p>To view more complex data or change program data, use the general <code>expression</code> command. It takes an expression and evaluates it in the scope of the currently selected frame. For instance:</p>
+
+<div class="code-block">(lldb) expr self
+$0 = (SKTGraphicView *) 0x0000000100135430
+(lldb) expr self = 0x00
+ $1 = (SKTGraphicView *) 0x0000000000000000
+(lldb) frame var self
+(SKTGraphicView *) self = 0x0000000000000000</div>
+
+<h2 id="sa-altcode">Executing Alternative Code</h2>
+
+<p>Expressions can also be used to call functions, as in this example:</p>
+
+<div class="code-block">(lldb) expr (int) printf ("I have a pointer 0x%llx.\n", self)
+$2 = (int) 22
+I have a pointer 0x0.</div>
+
+<p>The <code>expression</code> command is one of the raw commands. As a result, you don't have to quote your whole expression, or backslash protect quotes, and so forth.</p>
+
+<p>The results of the expressions are stored in persistent variables (of the form <code>$[0-9]+</code>) that you can use in further expressions, such as:</p>
+
+<div class="code-block">(lldb) expr self = $0
+$4 = (SKTGraphicView *) 0x0000000100135430</div>
+
+<div class="page-nav" style="margin-top:36px;">
+  <a href="#page-intro">‹ Previous</a>
+</div>
+
+<hr>
+<p style="font-size:12px;color:#888;">Copyright &#169; 2013 Apple Inc. All Rights Reserved. <a href="http://www.apple.com/legal/internet-services/terms/site.html">Terms of Use</a> | <a href="http://www.apple.com/privacy/">Privacy Policy</a> | Updated: 2013-09-18</p>
+
+</section>
+
+</main>
+</div>
+
+<footer>
+  <p>Copyright &#169; 2013 Apple Inc. All Rights Reserved. | <a href="http://www.apple.com/legal/internet-services/terms/site.html">Terms of Use</a> | <a href="http://www.apple.com/privacy/">Privacy Policy</a></p>
+  <p style="margin-top:6px;font-size:11px;">Source: <a href="https://developer.apple.com/library/archive/documentation/IDEs/Conceptual/gdb_to_lldb_transition_guide">https://developer.apple.com/library/archive/documentation/IDEs/Conceptual/gdb_to_lldb_transition_guide</a></p>
+</footer>
+
+</body>
+</html>
